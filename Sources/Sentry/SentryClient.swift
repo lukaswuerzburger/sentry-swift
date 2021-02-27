@@ -1,6 +1,5 @@
 import Foundation
 #if os(Linux)
-// error: 'URLSession' is unavailable: This type has moved to the FoundationNetworking module. Import that module to use it.
 import FoundationNetworking
 #endif
 public protocol ISentryClient {
@@ -34,45 +33,45 @@ public struct SentryClient: ISentryClient {
     public func capture(event: SentryEvent, scope: Scope? = nil) {
         print("capturing event..")
 
-        var e = prepare(event: event, scope: scope)
+        var preparedEvent = prepare(event: event, scope: scope)
         if let processors = scope?.eventProcessors {
-            var processedEvent: SentryEvent? = e
+            var processedEvent: SentryEvent? = preparedEvent
             for processor in processors {
                 processedEvent = processor.process(event: &processedEvent!)
                 if processedEvent == nil {
                     print("Processor '\(type(of: processor))' dropped the event")
                     return
                 }
-                e = processedEvent!;
+                preparedEvent = processedEvent!;
             }
         }
         if let beforeSend = self.options.beforeSend {
-            if let beforeSendEvent = beforeSend(&e) {
-                e = beforeSendEvent
+            if let beforeSendEvent = beforeSend(&preparedEvent) {
+                preparedEvent = beforeSendEvent
             } else {
                 print("dropped by beforeSend")
                 return
             }
         }
-        send(event: e)
+        send(event: preparedEvent)
     }
 
     private func prepare(event: SentryEvent, scope: Scope?) -> SentryEvent {
-        var e = event
-        if let s = scope {
-            if !s.tags.isEmpty {
-                if (e.tags == nil) {
-                    e.tags = s.tags
+        var preparedEvent = event
+        if let scope = scope {
+            if !scope.tags.isEmpty {
+                if (preparedEvent.tags == nil) {
+                    preparedEvent.tags = scope.tags
                 } else {
-                    for (k, v) in s.tags {
-                        if !e.tags!.keys.contains(k) {
-                            e.tags![k] = v
+                    for (key, value) in scope.tags {
+                        if !preparedEvent.tags!.keys.contains(key) {
+                            preparedEvent.tags![key] = value
                         }
                     }
                 }
             }
         }
-        return e
+        return preparedEvent
     }
 
     private func send(event: SentryEvent) {
@@ -85,12 +84,10 @@ public struct SentryClient: ISentryClient {
         request.setValue(auth, forHTTPHeaderField: "X-Sentry-Auth")
 
         do {
-            // let event_id = "f181ffbc78594984a99e7be7f50539dd"
-            let event_id = event.id.uuidString // has dashes
-            let header = try JSONSerialization.data(withJSONObject: ["event_id": event_id], options: [])
-            let payload = try JSONSerialization.data(withJSONObject: ["message": event.message, "event_id": event_id, "tags": event.tags], options: [])
-            let itemHeader = try JSONSerialization.data(withJSONObject: ["type": "event", "length": payload.count], options: [])
-
+            let header = try JSONSerialization.data(withJSONObject: headerPayload(event_id: event.id.uuidString), options: [])
+            let payload = try JSONSerialization.data(withJSONObject: bodyPayload(event: event), options: [])
+            let itemHeader = try JSONSerialization.data(withJSONObject: itemHeaderPayload(length: payload.count), options: [])
+            
             var data = Data()
             data.append(header)
             data.append(Data("\n".utf8))
@@ -118,6 +115,27 @@ public struct SentryClient: ISentryClient {
         } catch {
             print("Failed capturing: \(error)")
         }
+    }
+
+    private func headerPayload(event_id: String) -> [String: Any] {
+        return [
+            "event_id": event_id
+        ]
+    }
+
+    private func bodyPayload(event: SentryEvent) -> [String: Any?] {
+        return [
+            "message": event.message,
+            "event_id": event.id.uuidString,
+            "tags": event.tags
+        ]
+    }
+
+    private func itemHeaderPayload(length: Int) -> [String: Any] {
+        return [
+            "type": "event",
+            "length": length
+        ]
     }
 
     public func close() {
