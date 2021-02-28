@@ -3,11 +3,11 @@
     "pins": [
       {
         "package": "PLCrashReporter",
-        "repositoryURL": "https://github.com/microsoft/plcrashreporter.git",
+        "repositoryURL": "https://github.com/lukaswuerzburger/plcrashreporter.git",
         "state": {
-          "branch": null,
-          "revision": "6b7ca9a2faad6ea990ff60b0a3ee4fdf3db59150",
-          "version": "1.7.2"
+          "branch": "add-linux-support",
+          "revision": "5a5fdb0b57f1ac0d14bb48d55233d9bbd7f2921b",
+          "version": null
         }
       }
     ]

@@ -15,7 +15,7 @@ let package = Package(
             targets: ["Sentry"]),
     ],
     dependencies: [
-        .package(name: "PLCrashReporter", url: "https://github.com/microsoft/plcrashreporter.git", .upToNextMajor(from: "1.7.2"))
+        .package(name: "PLCrashReporter", url: "https://github.com/lukaswuerzburger/plcrashreporter.git", .branch("add-linux-support"))
     ],
     targets: [
         .target(
